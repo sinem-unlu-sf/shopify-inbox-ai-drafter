@@ -4,7 +4,7 @@ import { z } from "zod";
 import { getProduct, renderProductPage } from "./catalog";
 import { FALLBACK, SYSTEM_PROMPT, buildUserPrompt } from "./prompt";
 
-export const MODEL = process.env.OPENROUTER_MODEL || "anthropic/claude-sonnet-4.5";
+export const MODEL = process.env.OPENROUTER_MODEL || "baidu/ernie-5.5-flash-preview:free";
 
 const DraftSchema = z.object({
   reply: z.string().describe("The message to send the shopper."),
@@ -23,14 +23,26 @@ export async function draftReply(input: { productId: string; question: string; f
   if (!product) return { reply: FALLBACK, status: "escalated", page_evidence: [] };
 
   const openrouter = createOpenRouter({ apiKey });
-  const { object } = await generateObject({
+  let object: Draft | undefined;
+  for (let attempt = 1; attempt <= 3 && !object; attempt++) {
+    try {
+      ({ object } = await generateObject({
     model: openrouter(MODEL),
     schema: DraftSchema,
     system: SYSTEM_PROMPT,
     prompt: buildUserPrompt(renderProductPage(product), input.question, input.firstName),
     temperature: 0,
-    maxOutputTokens: 600,
-  });
+    maxOutputTokens: 2000,
+      }));
+    } catch (e) {
+      if (attempt === 3) {
+        // Unparseable model output: never guess, hand it to the merchant.
+        console.warn(`draft failed after 3 attempts: ${(e as Error).message}`);
+        return { reply: FALLBACK, status: "escalated", page_evidence: [] };
+      }
+    }
+  }
+  if (!object) return { reply: FALLBACK, status: "escalated", page_evidence: [] };
 
   // Guardrail: every quoted piece of evidence must actually appear on the page.
   const page = renderProductPage(product).toLowerCase();

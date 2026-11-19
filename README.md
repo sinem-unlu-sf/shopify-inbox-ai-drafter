@@ -12,7 +12,7 @@ Built with Next.js, the Vercel AI SDK, and OpenRouter.
 2. Put your key in `.env.local` (gitignored, never committed):
    ```
    OPENROUTER_API_KEY=sk-or-...
-   # optional: OPENROUTER_MODEL=anthropic/claude-sonnet-4.5
+   # optional: OPENROUTER_MODEL=baidu/ernie-5.5-flash-preview:free
    ```
 3. `npm run dev` → http://localhost:3000. Pick a sample question or type your own.
 
