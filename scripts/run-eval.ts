@@ -12,13 +12,13 @@ const esc = (s: string) => `"${s.replace(/"/g, '""')}"`;
 async function main() {
   console.log(`Drafting ${qs.length} replies with ${MODEL}…`);
   const rows: string[] = [];
-  const CONCURRENCY = 3; // OpenRouter new accounts: 20 requests/minute
+  const CONCURRENCY = Number(process.env.EVAL_CONCURRENCY || 3);
   for (let i = 0; i < qs.length; i += CONCURRENCY) {
     const batch = qs.slice(i, i + CONCURRENCY);
     const drafts = await Promise.all(batch.map((q) =>
       draftReply({ productId: q.product_id, question: q.question_text, firstName: q.shopper_first_name })
         .catch((e) => ({ reply: `ERROR: ${e.message}`, status: "error", page_evidence: [] as string[] }))));
-    if (i + CONCURRENCY < qs.length) await new Promise((r) => setTimeout(r, 10_000));
+    if (i + CONCURRENCY < qs.length) await new Promise((r) => setTimeout(r, Number(process.env.EVAL_DELAY_MS ?? 10_000)));
     batch.forEach((q, j) => {
       const d = drafts[j];
       console.log(`\n${q.question_id} [${q.product_id}] (${d.status}) page-answerable=${q.answerable_from_page}\n  Q: ${q.question_text}\n  A: ${d.reply}`);

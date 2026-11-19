@@ -1,10 +1,16 @@
 import { generateObject } from "ai";
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+import { DRAFTER_MODEL, model } from "./llm";
 import { z } from "zod";
 import { getProduct, renderProductPage } from "./catalog";
 import { FALLBACK, SYSTEM_PROMPT, buildUserPrompt } from "./prompt";
 
-export const MODEL = process.env.OPENROUTER_MODEL || "baidu/ernie-5.5-flash-preview:free";
+export const MODEL = DRAFTER_MODEL;
+
+const fallback = (firstName?: string): Draft => ({
+  reply: `${firstName ? `Hi ${firstName}, thanks for checking with us! ` : "Thanks for checking with us! "}${FALLBACK}`,
+  status: "escalated",
+  page_evidence: [],
+});
 
 const DraftSchema = z.object({
   reply: z.string().describe("The message to send the shopper."),
@@ -16,18 +22,16 @@ const DraftSchema = z.object({
 export type Draft = z.infer<typeof DraftSchema>;
 
 export async function draftReply(input: { productId: string; question: string; firstName?: string }): Promise<Draft> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) throw new Error("OPENROUTER_API_KEY is missing. Put it in .env.local.");
 
   const product = getProduct(input.productId);
-  if (!product) return { reply: FALLBACK, status: "escalated", page_evidence: [] };
+  if (!product) return fallback(input.firstName);
 
-  const openrouter = createOpenRouter({ apiKey });
+  const llm = model("drafter");
   let object: Draft | undefined;
   for (let attempt = 1; attempt <= 3 && !object; attempt++) {
     try {
       ({ object } = await generateObject({
-    model: openrouter(MODEL),
+    model: llm,
     schema: DraftSchema,
     system: SYSTEM_PROMPT,
     prompt: buildUserPrompt(renderProductPage(product), input.question, input.firstName),
@@ -38,25 +42,33 @@ export async function draftReply(input: { productId: string; question: string; f
       if (attempt === 3) {
         // Unparseable model output: never guess, hand it to the merchant.
         console.warn(`draft failed after 3 attempts: ${(e as Error).message}`);
-        return { reply: FALLBACK, status: "escalated", page_evidence: [] };
+        return fallback(input.firstName);
       }
     }
   }
-  if (!object) return { reply: FALLBACK, status: "escalated", page_evidence: [] };
+  if (!object) return fallback(input.firstName);
 
   // Guardrail: every quoted piece of evidence must actually appear on the page.
+  // Compare letters/digits only, so punctuation or spacing slips in a quote don't count as fabrication.
+  const norm = (t: string) => t.toLowerCase().replace(/[^a-z0-9]/g, "");
   const page = renderProductPage(product).toLowerCase();
-  const fabricated = object.page_evidence.filter((q) => !page.includes(q.toLowerCase().trim()));
+  const fabricated = object.page_evidence.filter((q) => !norm(page).includes(norm(q)));
   if (fabricated.length && object.status === "answered") {
-    return { reply: FALLBACK, status: "escalated", page_evidence: [] };
+    console.warn(`[guardrail] evidence not on page: ${JSON.stringify(fabricated)} | reply was: ${object.reply}`);
+    return fallback(input.firstName);
   }
   // Guardrail: block absence/safety claims the page itself doesn't make.
-  const risky = object.reply.match(
-    /\b(there(?: is|'s) no|does(?:n't| not) (?:contain|have)|none of (?:the|its)|free (?:of|from)|[a-z]+-free|no allergens?|(?:is|it's) safe)\b/gi,
-  ) ?? [];
-  const unsupported = risky.filter((phrase) => !page.includes(phrase.toLowerCase()));
+  // Checked per sentence: "it doesn't state whether it's cruelty-free" is honest; "it's cruelty-free" is a claim.
+  const RISKY = /\b(there(?: is|'s) no|does(?:n't| not) (?:contain|have)|none of (?:the|its)|free (?:of|from)|[a-z]+-free|no allergens?|(?:is|it's) safe)\b/gi;
+  const HEDGE = /\b(whether|doesn['’]t (?:say|state|mention|list|include)|does not (?:say|state|mention|list|include)|not (?:stated|listed|mentioned)|can['’]t (?:confirm|say)|cannot (?:confirm|say)|no (?:information|details|mention)|need to ask|not sure)\b/i;
+  const unsupported = object.reply
+    .split(/(?<=[.!?])\s+/)
+    .filter((sentence) => !HEDGE.test(sentence))
+    .flatMap((sentence) => sentence.match(RISKY) ?? [])
+    .filter((phrase) => !page.includes(phrase.toLowerCase()));
   if (unsupported.length) {
-    return { reply: FALLBACK, status: "escalated", page_evidence: [], blocked: unsupported } as Draft;
+    console.warn(`[guardrail] unsupported claim ${JSON.stringify(unsupported)} | reply was: ${object.reply}`);
+    return fallback(input.firstName);
   }
   return object;
 }

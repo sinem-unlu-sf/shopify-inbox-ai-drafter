@@ -6,9 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "eval": "tsx --env-file=.env.local scripts/run-eval.ts"
+    "eval": "tsx --env-file=.env.local scripts/run-eval.ts",
+    "grade": "tsx --env-file=.env.local scripts/grade.ts"
   },
   "dependencies": {
+    "@ai-sdk/openai-compatible": "^1.0.63",
     "@openrouter/ai-sdk-provider": "^1.5.4",
     "ai": "^5.0.291",
     "next": "^15.5.29",
