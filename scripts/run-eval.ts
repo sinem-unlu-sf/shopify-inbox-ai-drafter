@@ -3,6 +3,7 @@
 //        npm run eval -- Q-001 Q-006   (just these)
 import { mkdirSync, writeFileSync } from "node:fs";
 import { getQuestions } from "../lib/catalog";
+import { checkPilotFlag } from "../lib/pilot-gate";
 import { draftReply, MODEL } from "../lib/drafter";
 
 const only = process.argv.slice(2);
@@ -10,6 +11,8 @@ const qs = getQuestions().filter((q) => !only.length || only.includes(q.question
 const esc = (s: string) => `"${s.replace(/"/g, '""')}"`;
 
 async function main() {
+  const gate = await checkPilotFlag();
+  if (!gate.enabled) { console.error(`Pilot flag off (${gate.reason}); nothing drafted or written.`); process.exit(1); }
   console.log(`Drafting ${qs.length} replies with ${MODEL}…`);
   const rows: string[] = [];
   const CONCURRENCY = Number(process.env.EVAL_CONCURRENCY || 3);

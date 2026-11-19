@@ -5,6 +5,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { parseCsv } from "../lib/csv";
 import { getProduct, getQuestions, renderProductPage } from "../lib/catalog";
+import { checkPilotFlag } from "../lib/pilot-gate";
 import { draftReply } from "../lib/drafter";
 import { judgeReply, type JudgeResult } from "../lib/judge";
 import { DRAFTER_MODEL, JUDGE_MODEL } from "../lib/llm";
@@ -45,6 +46,8 @@ async function getDrafts(): Promise<Map<string, { reply: string; status: string 
 }
 
 async function main() {
+  const gate = await checkPilotFlag();
+  if (!gate.enabled) { console.error(`Pilot flag off (${gate.reason}); nothing drafted or written.`); process.exit(1); }
   const drafts = await getDrafts();
   console.log(`Judging ${questions.length} replies with ${JUDGE_MODEL} (drafter: ${DRAFTER_MODEL})…`);
   let done = 0;

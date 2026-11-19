@@ -1,5 +1,6 @@
 import { generateObject } from "ai";
 import { DRAFTER_MODEL, model } from "./llm";
+import { checkPilotFlag, PilotDisabledError, type FlagClient } from "./pilot-gate";
 import { z } from "zod";
 import { getProduct, renderProductPage } from "./catalog";
 import { FALLBACK, SYSTEM_PROMPT, buildUserPrompt } from "./prompt";
@@ -21,7 +22,14 @@ const DraftSchema = z.object({
 });
 export type Draft = z.infer<typeof DraftSchema>;
 
-export async function draftReply(input: { productId: string; question: string; firstName?: string }): Promise<Draft> {
+export async function draftReply(
+  input: { productId: string; question: string; firstName?: string },
+  opts: { flagClient?: FlagClient | null } = {},
+): Promise<Draft> {
+  // Server-side pilot gate: fail closed before any model call.
+  const gate = await checkPilotFlag(opts.flagClient);
+  if (!gate.enabled) throw new PilotDisabledError(gate.reason);
+
 
   const product = getProduct(input.productId);
   if (!product) return fallback(input.firstName);

@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "eval": "tsx --env-file=.env.local scripts/run-eval.ts",
-    "grade": "tsx --env-file=.env.local scripts/grade.ts"
+    "grade": "tsx --env-file=.env.local scripts/grade.ts",
+    "test": "tsx --test tests/*.test.ts",
+    "replay": "tsx --env-file=.env.local scripts/replay.ts"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^1.0.63",
