@@ -1,5 +1,35 @@
 # zero-shopify — Shopper Reply Drafter
 
+## Launch review
+
+| | |
+|---|---|
+| **Live merchant inbox** | https://shopify-inbox-ai-drafter-vercel.vercel.app/ (AI replies show only while the `inbox-ai-reply-drafter` flag is on) |
+| **Ship-or-stop memo** | [launch_memo.md](launch_memo.md): **STOP**. `unedited_send_rate` can't be measured until merchants use the inbox. Invented ingredients: 0 in promptfoo and PostHog. Exact hand-off: 43/43 in both. |
+
+### A question the product page can't answer
+
+Q-123 on the live inbox: Ifeoma asks whether the Whipped Shea Body Butter (DSP-022) is nut-free for her son's peanut allergy. The page makes no nut-free claim, so the draft is the approved hand-off, exactly, with no greeting and no nut-free claim.
+
+![Live merchant inbox: Q-123 gets the exact approved hand-off](docs/q-123-unanswerable-reply.webp)
+
+### Key prompt (excerpt from `lib/prompt.ts`)
+
+```text
+2. Ingredient is NOT listed -> NEVER write "no", "there is no", "doesn't contain", "none of the ingredients are",
+   "free of" or "X-free". A missing name is not a free-of claim, and a shopper with an allergy may rely on your words.
+4. Facility warnings ("Made in a facility that also handles tree nuts and peanuts") -> never call the product nut-free.
+
+# Fallback
+If ANY part of the question cannot be fully answered from the page, the whole reply must be exactly this sentence,
+with no greeting, no name, no partial answer and no other words, and status must be "escalated":
+"Thanks for asking. I don't want to guess on this, so I'll check with the shop and get back to you."
+```
+
+**What I changed and checked:** I replaced the old hand-off with the exact approved sentence and added a server-side rule that swaps any draft the page can't fully answer for it. I then checked it in promptfoo (43/43 exact, 0 invented ingredients in 120), in a PostHog replay (43/43, 0 invented ingredients), and on the live inbox with Q-123 (screenshot above).
+
+---
+
 Drafts replies to Shopify Inbox shopper questions using **only** the product page the shopper is asking about.
 If the page doesn't answer it, the reply hands off to the merchant:
 
