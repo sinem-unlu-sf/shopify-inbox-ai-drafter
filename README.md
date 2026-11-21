@@ -5,7 +5,11 @@
 | | |
 |---|---|
 | **Live merchant inbox** | https://shopify-inbox-ai-drafter-vercel.vercel.app/ (AI replies show only while the `inbox-ai-reply-drafter` flag is on) |
-| **Ship-or-stop memo** | [launch_memo.md](launch_memo.md): **STOP**. `unedited_send_rate` can't be measured until merchants use the inbox. Invented ingredients: 0 in promptfoo and PostHog. Exact hand-off: 43/43 in both. |
+| **Ship-or-stop memo** | [launch_memo.md](launch_memo.md) |
+| **Decision** | **STOP** |
+| Unedited send rate (≥ 60%) | Not measurable: 0 `ai_draft_sent_unchanged` / 0 `ai_draft_created` in PostHog. No genuine merchant usage yet. |
+| Invented ingredients (= 0) | 0: promptfoo 0 of 120 checks failed, PostHog 0 of 240 events failed |
+| Honest-unknown answers (100%) | 43/43 exact in promptfoo and in PostHog (on `data/questions.csv`; the 36-question CSV isn't in the repo) |
 
 ### A question the product page can't answer
 
@@ -13,7 +17,13 @@ Q-123 on the live inbox: Ifeoma asks whether the Whipped Shea Body Butter (DSP-0
 
 ![Live merchant inbox: Q-123 gets the exact approved hand-off](docs/q-123-unanswerable-reply.webp)
 
-### Key prompt (excerpt from `lib/prompt.ts`)
+### Key Claude Code prompt (excerpt)
+
+> Use genuine merchant usage, not automated replays or simulated sends. If the required events are missing, mark this bar NOT MEASURABLE.
+>
+> Do not generate artificial send events or click Send to manufacture a passing metric.
+
+### Drafter prompt it produced (excerpt from `lib/prompt.ts`)
 
 ```text
 2. Ingredient is NOT listed -> NEVER write "no", "there is no", "doesn't contain", "none of the ingredients are",
