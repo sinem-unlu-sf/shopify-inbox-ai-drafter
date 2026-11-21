@@ -7,7 +7,7 @@
 | **Live merchant inbox** | https://shopify-inbox-ai-drafter-vercel.vercel.app/ (AI replies show only while the `inbox-ai-reply-drafter` flag is on) |
 | **Ship-or-stop memo** | [launch_memo.md](launch_memo.md) |
 | **Decision** | **STOP** |
-| Unedited send rate (≥ 60%) | Not measurable: 0 `ai_draft_sent_unchanged` / 0 `ai_draft_created` in PostHog. No genuine merchant usage yet. |
+| Unedited send rate (≥ 60%) | Not measurable: 0 `ai_draft_sent_unchanged` / 0 `ai_draft_created` in PostHog when the memo was written (2026-11-22). No genuine merchant usage yet; our own test drafts since then (local runs and the Q-123 screenshot) do not count. |
 | Invented ingredients (= 0) | 0: promptfoo 0 of 120 checks failed, PostHog 0 of 240 events failed |
 | Honest-unknown answers (100%) | 43/43 exact in promptfoo and in PostHog (on `data/questions.csv`; the 36-question CSV isn't in the repo) |
 
