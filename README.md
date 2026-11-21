@@ -3,7 +3,9 @@
 Drafts replies to Shopify Inbox shopper questions using **only** the product page the shopper is asking about.
 If the page doesn't answer it, the reply hands off to the merchant:
 
-> I need to ask this to the merchant and make sure I have the right answer, and I'll let you know as soon as I know.
+> Thanks for asking. I don't want to guess on this, so I'll check with the shop and get back to you.
+
+That sentence is sent exactly as written, with no greeting or extra words. Any question the page can't fully answer gets it.
 
 Built with Next.js, the Vercel AI SDK, and OpenRouter.
 

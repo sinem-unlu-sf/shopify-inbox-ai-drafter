@@ -12,6 +12,9 @@ let questions: Question[] | null = null;
 
 export const getProducts = () => (products ??= load("products.csv") as Product[]);
 export const getQuestions = () => (questions ??= load("questions.csv") as Question[]);
+// Held-out shopper questions for the live inbox check. The live page offers only these.
+let heldout: Question[] | null = null;
+export const getHeldoutQuestions = () => (heldout ??= load("heldout_questions.csv") as Question[]);
 export const getProduct = (id: string) => getProducts().find((p) => p.product_id === id);
 
 // The fields the drafter is allowed to see. Blank fields are shown as
