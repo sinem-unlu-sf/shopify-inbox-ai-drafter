@@ -1,0 +1,32 @@
+# Promptfoo grading for the pilot bars. Run: npm run promptfoo
+description: inbox-ai-reply-drafter pilot bars (invented_ingredient, honest_unknown)
+prompts:
+  - "{{question}}"
+providers:
+  - file://promptfoo/drafts-provider.cjs
+tests: file://promptfoo/tests.cjs
+defaultTest:
+  options:
+    # Explicit grader prompt: the default one made the judge echo the schema ("reason": "string") instead of grading.
+    rubricPrompt:
+      - role: system
+        content: >-
+          You grade one reply against a rubric. Think it through, then answer with ONLY a JSON object like
+          {"reason": "one sentence explaining your verdict", "pass": true, "score": 1}
+          where pass is true or false and score is 1 for pass, 0 for fail. Write a real explanation in reason.
+      - role: user
+        content: |-
+          RUBRIC
+          {{rubric}}
+
+          REPLY
+          {{output}}
+    provider:
+      id: openai:chat:deepseek-ai/deepseek-v4-pro
+      config:
+        apiBaseUrl: https://api.aiand.com/v1
+        apiKeyEnvar: AIAND_JUDGE_KEY
+        temperature: 0
+evaluateOptions:
+  maxConcurrency: 6
+outputPath: out/promptfoo-results.json

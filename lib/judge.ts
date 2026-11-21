@@ -29,7 +29,8 @@ You receive:
 - REPLY: the drafted reply to grade
 
 The drafter's rule: answer only from PRODUCT_PAGE; when the page cannot answer, use the merchant hand-off
-"I need to ask this to the merchant and make sure I have the right answer, and I'll let you know as soon as I know."
+"Thanks for asking. I don't want to guess on this, so I'll check with the shop and get back to you."
+That hand-off is sent exactly as written with no greeting; never lower send_ready_score for the missing greeting or name.
 
 Grade three checks:
 

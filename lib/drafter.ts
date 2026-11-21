@@ -7,11 +7,8 @@ import { FALLBACK, SYSTEM_PROMPT, buildUserPrompt } from "./prompt";
 
 export const MODEL = DRAFTER_MODEL;
 
-const fallback = (firstName?: string): Draft => ({
-  reply: `${firstName ? `Hi ${firstName}, thanks for checking with us! ` : "Thanks for checking with us! "}${FALLBACK}`,
-  status: "escalated",
-  page_evidence: [],
-});
+// Anything not fully answered from the page gets the approved sentence, exactly, with nothing added.
+const fallback = (_firstName?: string): Draft => ({ reply: FALLBACK, status: "escalated", page_evidence: [] });
 
 const DraftSchema = z.object({
   reply: z.string().describe("The message to send the shopper."),
@@ -55,6 +52,8 @@ export async function draftReply(
     }
   }
   if (!object) return fallback(input.firstName);
+  // Partial or escalated drafts never go out as paraphrases: only a full page-backed answer keeps its own wording.
+  if (object.status !== "answered" || object.reply.includes(FALLBACK)) return fallback(input.firstName);
 
   // Guardrail: every quoted piece of evidence must actually appear on the page.
   // Compare letters/digits only, so punctuation or spacing slips in a quote don't count as fabrication.

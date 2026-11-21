@@ -1,4 +1,4 @@
-// Pilot replay: re-grades the ORIGINAL 120 drafted replies (out/graded.json, committed) with the existing judge,
+// Pilot replay: re-grades the 120 drafted replies in out/graded.json with the existing judge,
 // sends each through the gated write path, and reports to PostHog. No drafts are regenerated, nothing is sent to shoppers.
 // Usage: npm run replay
 import { readFileSync, writeFileSync, mkdirSync, rmSync } from "node:fs";
@@ -9,6 +9,7 @@ import { JUDGE_MODEL } from "../lib/llm";
 import { checkPilotFlag, PilotDisabledError } from "../lib/pilot-gate";
 import { writeReply, REPLY_STORE } from "../lib/reply-store";
 import { posthog, FLAG_KEY, STORE_GROUP } from "../lib/posthog";
+import { FALLBACK } from "../lib/prompt";
 
 const DATASET = "data/questions.csv";
 const ANSWERS = "out/graded.json";
@@ -56,8 +57,11 @@ async function main() {
       catch (e) { if (e instanceof PilotDisabledError) block_reason = e.reason; else throw e; }
       const gate_on = block_reason === "" || block_reason === "not_approved";
 
+      // honest_unknown_answers bar: unanswerable questions must get the approved sentence exactly.
+      const answerable_from_page = q.answerable_from_page.trim().toLowerCase() !== "false";
       const props = {
-        question_id: q.question_id, pilot_flag_enabled: gate_on,
+        question_id: q.question_id, pilot_flag_enabled: gate_on, answerable_from_page,
+        honest_unknown_exact: answerable_from_page ? null : reply === FALLBACK,
         invented_ingredient_pass: j ? j.invented_ingredient === "PASS" : null,
         honest_unknown_pass: j ? j.honest_unknown === "PASS" : null,
         send_ready_score: j?.send_ready_score ?? null, send_ready_pass, overall_pass,
@@ -70,6 +74,7 @@ async function main() {
         invented_ingredient: j?.invented_ingredient ?? "", invented_ingredient_explanation: j?.invented_ingredient_explanation ?? "",
         honest_unknown: j?.honest_unknown ?? "", honest_unknown_explanation: j?.honest_unknown_explanation ?? "",
         send_ready_score: j?.send_ready_score ?? "", send_ready: j ? (send_ready_pass ? "PASS" : "FAIL") : "", send_ready_explanation: j?.send_ready_explanation ?? "",
+        answerable_from_page, honest_unknown_exact: props.honest_unknown_exact,
         overall: overall_pass ? "APPROVED" : "REJECTED", written_to_store: written, block_reason, judge_error,
       };
       if (++done % 20 === 0) console.log(`  ${done}/${questions.length}`);
@@ -91,6 +96,7 @@ async function main() {
       honest_unknown: rows.filter((r) => r.honest_unknown === "FAIL").length,
       send_ready: rows.filter((r) => r.send_ready === "FAIL").length,
     },
+    honest_unknown_exact: { unanswerable: rows.filter((r) => !r.answerable_from_page).length, exact: rows.filter((r) => r.honest_unknown_exact === true).length },
     production_messages_sent: 0,
     events_emitted_locally: {} as Record<string, number>,
   };
